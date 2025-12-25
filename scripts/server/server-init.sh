@@ -67,7 +67,7 @@ show_menu() {
     echo "  1) 国内服务器 (使用国内镜像源加速)"
     echo "  2) 海外服务器 (使用官方源)"
     echo ""
-    read -p "请输入选项 [1/2]: " region_choice
+    read -p "请输入选项 [1/2]: " region_choice < /dev/tty
 
     case $region_choice in
         1)
@@ -93,7 +93,7 @@ show_menu() {
     echo "  4) 基础软件 + Docker + Miniconda"
     echo "  5) 自定义选择"
     echo ""
-    read -p "请输入选项 [1-5]: " install_choice
+    read -p "请输入选项 [1-5]: " install_choice < /dev/tty
 
     # 初始化安装选项
     INSTALL_BASIC=false
@@ -138,7 +138,7 @@ show_menu() {
     # 如果选择配置 Nginx，询问域名
     if [[ "$INSTALL_NGINX_CONFIG" == true ]]; then
         echo ""
-        read -p "请输入您的域名 (例如: example.com): " DOMAIN_NAME
+        read -p "请输入您的域名 (例如: example.com): " DOMAIN_NAME < /dev/tty
         if [[ -z "$DOMAIN_NAME" ]]; then
             print_warning "未输入域名，将跳过 Nginx 配置"
             INSTALL_NGINX_CONFIG=false
@@ -156,7 +156,7 @@ show_menu() {
     echo "中文支持:   $([ "$INSTALL_CHINESE" == true ] && echo "是" || echo "否")"
     echo -e "${YELLOW}==========================${NC}"
     echo ""
-    read -p "确认开始安装? [Y/n]: " confirm
+    read -p "确认开始安装? [Y/n]: " confirm < /dev/tty
     if [[ "$confirm" =~ ^[Nn]$ ]]; then
         print_info "安装已取消"
         exit 0
@@ -166,19 +166,19 @@ show_menu() {
 # 自定义选择
 custom_select() {
     echo ""
-    read -p "安装基础软件? [Y/n]: " choice
+    read -p "安装基础软件? [Y/n]: " choice < /dev/tty
     [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_BASIC=true
 
-    read -p "安装 Docker & Docker Compose? [Y/n]: " choice
+    read -p "安装 Docker & Docker Compose? [Y/n]: " choice < /dev/tty
     [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_DOCKER=true
 
-    read -p "安装 Miniconda? [Y/n]: " choice
+    read -p "安装 Miniconda? [Y/n]: " choice < /dev/tty
     [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_MINICONDA=true
 
-    read -p "配置 Nginx 站点? [Y/n]: " choice
+    read -p "配置 Nginx 站点? [Y/n]: " choice < /dev/tty
     [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_NGINX_CONFIG=true
 
-    read -p "配置中文支持? [Y/n]: " choice
+    read -p "配置中文支持? [Y/n]: " choice < /dev/tty
     [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_CHINESE=true
 }
 
