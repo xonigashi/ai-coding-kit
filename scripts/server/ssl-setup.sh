@@ -390,8 +390,15 @@ install_certificate() {
 
     print_info "证书安装路径: $cert_dir"
 
+    # 检测证书类型 (ECC 或 RSA)
+    local ecc_flag=""
+    if [[ -d "$ACME_HOME/${DOMAIN_NAME}_ecc" ]]; then
+        ecc_flag="--ecc"
+        print_info "检测到 ECC 证书"
+    fi
+
     # 安装证书，并配置 reload 命令
-    "$ACME_HOME/acme.sh" --install-cert -d ${DOMAIN_NAME} \
+    "$ACME_HOME/acme.sh" --install-cert -d ${DOMAIN_NAME} $ecc_flag \
         --key-file       "$cert_dir/${DOMAIN_NAME}.key" \
         --fullchain-file "$cert_dir/fullchain.crt" \
         --reloadcmd      "sudo systemctl reload nginx 2>/dev/null || sudo nginx -s reload 2>/dev/null || true"
