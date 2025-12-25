@@ -224,6 +224,35 @@ install_basic_software() {
 install_docker() {
     print_header "安装 Docker & Docker Compose"
 
+    # 检测是否已安装
+    if command -v docker &> /dev/null; then
+        print_warning "Docker 已安装，跳过安装步骤"
+        docker --version
+        docker compose version 2>/dev/null || true
+
+        # 确保服务运行
+        sudo systemctl enable --now docker 2>/dev/null || true
+
+        # 确保用户在 docker 组
+        sudo usermod -aG docker $USER 2>/dev/null || true
+
+        # 如果是国内且没有配置镜像加速，则配置
+        if [[ "$REGION" == "china" ]] && [[ ! -f /etc/docker/daemon.json ]]; then
+            sudo mkdir -p /etc/docker
+            sudo tee /etc/docker/daemon.json > /dev/null <<DOCKEREOF
+{
+    "registry-mirrors": [
+        "https://docker.1ms.run",
+        "https://docker.xuanyuan.me"
+    ]
+}
+DOCKEREOF
+            sudo systemctl restart docker
+            print_info "已配置 Docker 镜像加速"
+        fi
+        return 0
+    fi
+
     # 卸载旧版本
     sudo apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
 
@@ -292,6 +321,43 @@ EOF
 install_miniconda() {
     print_header "安装 Miniconda"
 
+    # 检测是否已安装
+    if [[ -d "$HOME/miniconda" ]] || command -v conda &> /dev/null; then
+        print_warning "Miniconda 已安装，跳过安装步骤"
+
+        # 获取 conda 路径
+        if [[ -f "$HOME/miniconda/bin/conda" ]]; then
+            CONDA_BIN="$HOME/miniconda/bin/conda"
+        elif command -v conda &> /dev/null; then
+            CONDA_BIN="conda"
+        else
+            print_error "找到 miniconda 目录但未找到 conda 命令"
+            return 1
+        fi
+
+        $CONDA_BIN --version
+
+        # 如果是国内，检查并配置镜像源
+        if [[ "$REGION" == "china" ]]; then
+            if ! $CONDA_BIN config --show channels | grep -q "tuna.tsinghua"; then
+                $CONDA_BIN config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+                $CONDA_BIN config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+                $CONDA_BIN config --set show_channel_urls yes
+                print_info "已配置 Conda 清华镜像源"
+            fi
+        fi
+
+        # 检查 py310 环境是否存在
+        if ! $CONDA_BIN env list | grep -q "py310"; then
+            print_info "创建 py310 环境..."
+            $CONDA_BIN create -y -n py310 python=3.10
+        else
+            print_info "py310 环境已存在"
+        fi
+
+        return 0
+    fi
+
     cd /tmp
 
     if [[ "$REGION" == "china" ]]; then
@@ -303,8 +369,10 @@ install_miniconda() {
 
     bash miniconda.sh -b -p $HOME/miniconda
 
-    # 添加到 PATH
-    echo 'export PATH="$HOME/miniconda/bin:$PATH"' >> ~/.bashrc
+    # 添加到 PATH (检查是否已添加)
+    if ! grep -q 'miniconda/bin' ~/.bashrc; then
+        echo 'export PATH="$HOME/miniconda/bin:$PATH"' >> ~/.bashrc
+    fi
     export PATH="$HOME/miniconda/bin:$PATH"
 
     # 初始化 conda
