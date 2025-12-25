@@ -85,6 +85,22 @@ jobs:
           echo "$UI_VERSION" > UI_VERSION
           ls -lh metacubexd.tgz
 
+      - name: Download GeoIP/GeoSite data
+        if: steps.get_release.outputs.needs_update == 'true'
+        run: |
+          cd scripts/server/bin
+
+          echo "Downloading GeoIP and GeoSite data..."
+
+          # 下载 GeoIP 数据
+          wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -O geoip.dat
+
+          # 下载 GeoSite 数据
+          wget -q "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -O geosite.dat
+
+          ls -lh geoip.dat geosite.dat
+          echo "GeoData download completed!"
+
       - name: Commit and push
         if: steps.get_release.outputs.needs_update == 'true'
         run: |
@@ -99,6 +115,7 @@ jobs:
           - Updated mihomo-linux-amd64.gz
           - Updated mihomo-linux-arm64.gz
           - Updated metacubexd.tgz (UI panel)
+          - Updated geoip.dat and geosite.dat
 
           Auto-synced by GitHub Actions"
 

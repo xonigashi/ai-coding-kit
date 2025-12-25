@@ -282,6 +282,9 @@ install_mihomo() {
         print_warning "管理面板下载失败，可稍后手动安装"
     fi
 
+    # 安装 GeoIP/GeoSite 数据文件
+    install_geodata
+
     # 创建默认配置（如果不存在）
     if [[ ! -f "$MIHOMO_CONFIG" ]]; then
         create_default_config
@@ -300,6 +303,74 @@ install_mihomo() {
     read -p "是否现在编辑配置文件? [y/N]: " edit_config
     if [[ "$edit_config" =~ ^[Yy]$ ]]; then
         ${EDITOR:-vim} $MIHOMO_CONFIG
+    fi
+}
+
+#===============================================================================
+# 安装 GeoIP/GeoSite 数据
+#===============================================================================
+install_geodata() {
+    print_info "安装 GeoIP/GeoSite 数据..."
+
+    LOCAL_GEOIP="$SCRIPT_DIR/bin/geoip.dat"
+    LOCAL_GEOSITE="$SCRIPT_DIR/bin/geosite.dat"
+
+    # GeoIP
+    if [[ -f "$MIHOMO_DIR/geoip.dat" ]]; then
+        print_info "GeoIP 数据已存在"
+    elif [[ -f "$LOCAL_GEOIP" ]]; then
+        cp "$LOCAL_GEOIP" "$MIHOMO_DIR/geoip.dat"
+        print_success "GeoIP 数据安装成功 (本地)"
+    else
+        print_info "下载 GeoIP 数据..."
+        GEOIP_URL="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat"
+        GEOIP_MIRRORS=(
+            "https://mirror.ghproxy.com/${GEOIP_URL}"
+            "https://gh.ddlc.top/${GEOIP_URL}"
+            "${GEOIP_URL}"
+        )
+
+        for url in "${GEOIP_MIRRORS[@]}"; do
+            if wget -q --timeout=30 "$url" -O "$MIHOMO_DIR/geoip.dat" 2>/dev/null; then
+                if [[ -s "$MIHOMO_DIR/geoip.dat" ]]; then
+                    print_success "GeoIP 数据下载成功"
+                    break
+                fi
+            fi
+        done
+    fi
+
+    # GeoSite
+    if [[ -f "$MIHOMO_DIR/geosite.dat" ]]; then
+        print_info "GeoSite 数据已存在"
+    elif [[ -f "$LOCAL_GEOSITE" ]]; then
+        cp "$LOCAL_GEOSITE" "$MIHOMO_DIR/geosite.dat"
+        print_success "GeoSite 数据安装成功 (本地)"
+    else
+        print_info "下载 GeoSite 数据..."
+        GEOSITE_URL="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
+        GEOSITE_MIRRORS=(
+            "https://mirror.ghproxy.com/${GEOSITE_URL}"
+            "https://gh.ddlc.top/${GEOSITE_URL}"
+            "${GEOSITE_URL}"
+        )
+
+        for url in "${GEOSITE_MIRRORS[@]}"; do
+            if wget -q --timeout=30 "$url" -O "$MIHOMO_DIR/geosite.dat" 2>/dev/null; then
+                if [[ -s "$MIHOMO_DIR/geosite.dat" ]]; then
+                    print_success "GeoSite 数据下载成功"
+                    break
+                fi
+            fi
+        done
+    fi
+
+    # 检查是否成功
+    if [[ ! -f "$MIHOMO_DIR/geoip.dat" ]] || [[ ! -f "$MIHOMO_DIR/geosite.dat" ]]; then
+        print_warning "GeoData 下载失败，可能需要手动下载"
+        print_info "手动下载命令:"
+        print_info "  wget https://mirror.ghproxy.com/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat -O /opt/mihomo/geoip.dat"
+        print_info "  wget https://mirror.ghproxy.com/https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat -O /opt/mihomo/geosite.dat"
     fi
 }
 
