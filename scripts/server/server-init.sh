@@ -6,7 +6,8 @@
 # 或者: bash server-init.sh
 #===============================================================================
 
-set -e
+# 不使用 set -e，允许个别命令失败后继续执行
+# set -e
 
 # 颜色定义
 RED='\033[0;31m'
@@ -70,7 +71,7 @@ show_menu() {
     read -p "请输入选项 [1/2]: " region_choice < /dev/tty
 
     case $region_choice in
-        1)
+        1|"")
             REGION="china"
             print_info "已选择: 国内服务器 - 将使用阿里云/清华镜像源"
             ;;
@@ -79,8 +80,8 @@ show_menu() {
             print_info "已选择: 海外服务器 - 将使用官方源"
             ;;
         *)
-            print_warning "无效选项，默认使用海外服务器配置"
-            REGION="overseas"
+            print_warning "无效选项，默认使用国内服务器配置"
+            REGION="china"
             ;;
     esac
 
@@ -103,7 +104,7 @@ show_menu() {
     INSTALL_CHINESE=false
 
     case $install_choice in
-        1)
+        1|"")
             INSTALL_BASIC=true
             INSTALL_DOCKER=true
             INSTALL_MINICONDA=true
@@ -350,7 +351,13 @@ install_miniconda() {
         # 检查 py310 环境是否存在
         if ! $CONDA_BIN env list | grep -q "py310"; then
             print_info "创建 py310 环境..."
-            $CONDA_BIN create -y -n py310 python=3.10
+            # 先尝试接受 ToS（如果需要的话）
+            $CONDA_BIN config --set auto_activate_base false 2>/dev/null || true
+            # 创建环境，如果失败则跳过
+            if ! $CONDA_BIN create -y -n py310 python=3.10 2>/dev/null; then
+                print_warning "创建 py310 环境失败，可能需要先运行: conda tos accept"
+                print_info "你可以稍后手动创建: conda create -y -n py310 python=3.10"
+            fi
         else
             print_info "py310 环境已存在"
         fi
@@ -387,7 +394,10 @@ install_miniconda() {
     fi
 
     # 创建 Python 3.10 环境
-    $HOME/miniconda/bin/conda create -y -n py310 python=3.10
+    if ! $HOME/miniconda/bin/conda create -y -n py310 python=3.10 2>/dev/null; then
+        print_warning "创建 py310 环境失败，可能需要先接受服务条款"
+        print_info "你可以稍后手动创建: conda create -y -n py310 python=3.10"
+    fi
 
     # 清理安装文件
     rm -f /tmp/miniconda.sh
@@ -736,28 +746,20 @@ HTMLEOF
     # 替换占位符
     sudo sed -i "s/DOMAIN_PLACEHOLDER/${DOMAIN_NAME}/g" /var/www/api.${DOMAIN_NAME}/html/index.html
 
-    print_info "DEBUG: 开始配置 Nginx 站点文件..."
-
     # 删除默认配置的软链接
-    print_info "DEBUG: 检查 sites-enabled/default..."
     if [[ -f /etc/nginx/sites-enabled/default ]]; then
         sudo rm -f /etc/nginx/sites-enabled/default
-        print_info "已移除默认站点配置"
-    else
-        print_info "DEBUG: sites-enabled/default 不存在或已删除"
+        print_info "已移除默认站点软链接"
     fi
 
     # 备份默认配置文件
-    print_info "DEBUG: 检查 sites-available/default..."
     if [[ -f /etc/nginx/sites-available/default ]]; then
         sudo mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default.bak
         print_info "已备份 default 配置到 default.bak"
-    else
-        print_info "DEBUG: sites-available/default 不存在或已备份"
     fi
 
     # 创建 Nginx 配置
-    print_info "DEBUG: 正在创建 /etc/nginx/sites-available/${DOMAIN_NAME}..."
+    print_info "正在创建 Nginx 配置文件..."
     sudo tee /etc/nginx/sites-available/${DOMAIN_NAME} > /dev/null <<EOF
 # ${DOMAIN_NAME}: HTTP to HTTPS Redirect
 server {
@@ -844,20 +846,15 @@ server {
 # }
 EOF
 
-    print_info "DEBUG: 配置文件创建完成，验证文件是否存在..."
-    ls -la /etc/nginx/sites-available/ || true
-
     # 创建符号链接
-    print_info "DEBUG: 创建符号链接..."
     sudo ln -sf /etc/nginx/sites-available/${DOMAIN_NAME} /etc/nginx/sites-enabled/${DOMAIN_NAME}
 
-    print_info "DEBUG: 验证符号链接..."
-    ls -la /etc/nginx/sites-enabled/ || true
-
     # 检查配置并重载
-    print_info "DEBUG: 检查 Nginx 配置语法..."
-    sudo nginx -t
-    sudo systemctl reload nginx
+    if sudo nginx -t; then
+        sudo systemctl reload nginx
+    else
+        print_error "Nginx 配置语法错误，请检查配置文件"
+    fi
 
     print_success "Nginx 配置完成"
     print_info "主站点: http://${DOMAIN_NAME}"
@@ -934,10 +931,6 @@ main() {
     check_sudo
     show_menu
 
-    # 调试输出
-    print_info "DEBUG: INSTALL_NGINX_CONFIG = $INSTALL_NGINX_CONFIG"
-    print_info "DEBUG: DOMAIN_NAME = $DOMAIN_NAME"
-
     # 执行安装
     [[ "$REGION" == "china" ]] && setup_china_mirrors
 
@@ -949,12 +942,7 @@ main() {
     [[ "$INSTALL_DOCKER" == true ]] && install_docker
     [[ "$INSTALL_MINICONDA" == true ]] && install_miniconda
 
-    if [[ "$INSTALL_NGINX_CONFIG" == true ]]; then
-        print_info "准备配置 Nginx，域名: $DOMAIN_NAME"
-        configure_nginx
-    else
-        print_warning "跳过 Nginx 配置 (INSTALL_NGINX_CONFIG=$INSTALL_NGINX_CONFIG)"
-    fi
+    [[ "$INSTALL_NGINX_CONFIG" == true ]] && configure_nginx
 
     [[ "$INSTALL_CHINESE" == true ]] && configure_chinese
 
