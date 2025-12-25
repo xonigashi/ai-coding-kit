@@ -83,24 +83,6 @@ curl -fsSL https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/master/scri
 - Auto-install to `/etc/ssl/certs/{domain}/` / 自动安装证书到指定路径
 - Auto-renewal with nginx reload / 自动续期并重载 Nginx
 
-#### [proxy-setup.sh](./scripts/server/proxy-setup.sh)
-
-Transparent proxy setup for China servers using Mihomo (Clash Meta). Enables seamless access to Docker Hub, GitHub, npm, and other developer resources.
-
-国内服务器透明代理安装脚本，基于 Mihomo (Clash Meta)。让 Docker Hub、GitHub、npm 等开发资源畅通无阻。
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/master/scripts/server/proxy-setup.sh -o proxy-setup.sh && sudo bash proxy-setup.sh
-```
-
-**Features / 功能:**
-- One-click Mihomo installation / 一键安装 Mihomo
-- Smart routing: China direct, blocked sites via proxy / 智能分流：国内直连，被墙走代理
-- TUN mode for transparent proxy / TUN 模式透明代理
-- Pre-configured rules for Docker, GitHub, npm, AI services / 预配置开发工具规则
-- Docker & Git proxy auto-config / Docker 和 Git 代理自动配置
-- Web UI dashboard / Web 管理面板
-
 ---
 
 ## Usage / 使用
