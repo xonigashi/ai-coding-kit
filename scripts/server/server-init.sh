@@ -1,0 +1,666 @@
+#!/bin/bash
+
+#===============================================================================
+# Ubuntu Server 初始化脚本
+# 用法: curl -fsSL <url>/server-init.sh | bash
+# 或者: bash server-init.sh
+#===============================================================================
+
+set -e
+
+# 颜色定义
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# 打印函数
+print_header() {
+    echo -e "\n${CYAN}============================================${NC}"
+    echo -e "${CYAN}  $1${NC}"
+    echo -e "${CYAN}============================================${NC}\n"
+}
+
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# 检查是否为 root 或有 sudo 权限
+check_sudo() {
+    if [[ $EUID -ne 0 ]]; then
+        if ! sudo -v &>/dev/null; then
+            print_error "此脚本需要 root 权限或 sudo 权限"
+            exit 1
+        fi
+    fi
+}
+
+#===============================================================================
+# 交互式菜单
+#===============================================================================
+show_menu() {
+    clear
+    echo -e "${CYAN}"
+    echo "╔════════════════════════════════════════════════════════════╗"
+    echo "║                                                            ║"
+    echo "║           Ubuntu Server 初始化脚本 v1.0                    ║"
+    echo "║                                                            ║"
+    echo "╚════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+
+    echo -e "${YELLOW}请选择服务器所在地区:${NC}"
+    echo ""
+    echo "  1) 国内服务器 (使用国内镜像源加速)"
+    echo "  2) 海外服务器 (使用官方源)"
+    echo ""
+    read -p "请输入选项 [1/2]: " region_choice
+
+    case $region_choice in
+        1)
+            REGION="china"
+            print_info "已选择: 国内服务器 - 将使用阿里云/清华镜像源"
+            ;;
+        2)
+            REGION="overseas"
+            print_info "已选择: 海外服务器 - 将使用官方源"
+            ;;
+        *)
+            print_warning "无效选项，默认使用海外服务器配置"
+            REGION="overseas"
+            ;;
+    esac
+
+    echo ""
+    echo -e "${YELLOW}请选择要安装的组件:${NC}"
+    echo ""
+    echo "  1) 全部安装 (推荐)"
+    echo "  2) 仅安装基础软件"
+    echo "  3) 基础软件 + Docker"
+    echo "  4) 基础软件 + Docker + Miniconda"
+    echo "  5) 自定义选择"
+    echo ""
+    read -p "请输入选项 [1-5]: " install_choice
+
+    # 初始化安装选项
+    INSTALL_BASIC=false
+    INSTALL_DOCKER=false
+    INSTALL_MINICONDA=false
+    INSTALL_NGINX_CONFIG=false
+    INSTALL_CHINESE=false
+
+    case $install_choice in
+        1)
+            INSTALL_BASIC=true
+            INSTALL_DOCKER=true
+            INSTALL_MINICONDA=true
+            INSTALL_NGINX_CONFIG=true
+            INSTALL_CHINESE=true
+            ;;
+        2)
+            INSTALL_BASIC=true
+            ;;
+        3)
+            INSTALL_BASIC=true
+            INSTALL_DOCKER=true
+            ;;
+        4)
+            INSTALL_BASIC=true
+            INSTALL_DOCKER=true
+            INSTALL_MINICONDA=true
+            ;;
+        5)
+            custom_select
+            ;;
+        *)
+            print_warning "无效选项，将执行全部安装"
+            INSTALL_BASIC=true
+            INSTALL_DOCKER=true
+            INSTALL_MINICONDA=true
+            INSTALL_NGINX_CONFIG=true
+            INSTALL_CHINESE=true
+            ;;
+    esac
+
+    # 如果选择配置 Nginx，询问域名
+    if [[ "$INSTALL_NGINX_CONFIG" == true ]]; then
+        echo ""
+        read -p "请输入您的域名 (例如: example.com): " DOMAIN_NAME
+        if [[ -z "$DOMAIN_NAME" ]]; then
+            print_warning "未输入域名，将跳过 Nginx 配置"
+            INSTALL_NGINX_CONFIG=false
+        fi
+    fi
+
+    # 确认安装
+    echo ""
+    echo -e "${YELLOW}======== 安装确认 ========${NC}"
+    echo "服务器地区: $([ "$REGION" == "china" ] && echo "国内" || echo "海外")"
+    echo "基础软件:   $([ "$INSTALL_BASIC" == true ] && echo "是" || echo "否")"
+    echo "Docker:     $([ "$INSTALL_DOCKER" == true ] && echo "是" || echo "否")"
+    echo "Miniconda:  $([ "$INSTALL_MINICONDA" == true ] && echo "是" || echo "否")"
+    echo "Nginx配置:  $([ "$INSTALL_NGINX_CONFIG" == true ] && echo "是 ($DOMAIN_NAME)" || echo "否")"
+    echo "中文支持:   $([ "$INSTALL_CHINESE" == true ] && echo "是" || echo "否")"
+    echo -e "${YELLOW}==========================${NC}"
+    echo ""
+    read -p "确认开始安装? [Y/n]: " confirm
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        print_info "安装已取消"
+        exit 0
+    fi
+}
+
+# 自定义选择
+custom_select() {
+    echo ""
+    read -p "安装基础软件? [Y/n]: " choice
+    [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_BASIC=true
+
+    read -p "安装 Docker & Docker Compose? [Y/n]: " choice
+    [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_DOCKER=true
+
+    read -p "安装 Miniconda? [Y/n]: " choice
+    [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_MINICONDA=true
+
+    read -p "配置 Nginx 站点? [Y/n]: " choice
+    [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_NGINX_CONFIG=true
+
+    read -p "配置中文支持? [Y/n]: " choice
+    [[ ! "$choice" =~ ^[Nn]$ ]] && INSTALL_CHINESE=true
+}
+
+#===============================================================================
+# 换源 (国内)
+#===============================================================================
+setup_china_mirrors() {
+    print_header "配置国内镜像源"
+
+    # 备份原有源
+    sudo cp /etc/apt/sources.list /etc/apt/sources.list.backup.$(date +%Y%m%d%H%M%S)
+
+    # 获取 Ubuntu 版本代号
+    UBUNTU_CODENAME=$(lsb_release -cs)
+
+    # 使用阿里云镜像源
+    sudo tee /etc/apt/sources.list > /dev/null <<EOF
+# 阿里云镜像源
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME} main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-updates main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-backports main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-security main restricted universe multiverse
+EOF
+
+    print_success "APT 源已更换为阿里云镜像"
+}
+
+#===============================================================================
+# 安装基础软件
+#===============================================================================
+install_basic_software() {
+    print_header "安装基础软件"
+
+    sudo apt update
+    sudo apt install -y git curl wget htop net-tools tmux vim nginx
+
+    print_success "基础软件安装完成"
+}
+
+#===============================================================================
+# 安装 Docker
+#===============================================================================
+install_docker() {
+    print_header "安装 Docker & Docker Compose"
+
+    # 卸载旧版本
+    sudo apt remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+
+    # 安装依赖
+    sudo apt update
+    sudo apt install -y ca-certificates curl gnupg lsb-release
+
+    # 添加 Docker GPG key 和仓库
+    if [[ "$REGION" == "china" ]]; then
+        # 使用阿里云 Docker 镜像
+        curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | \
+            sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+        echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+            https://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+        print_info "使用阿里云 Docker 镜像源"
+    else
+        # 使用官方源
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+            sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+        echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
+            https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    fi
+
+    # 安装 Docker
+    sudo apt update
+    sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+    # 配置 Docker 镜像加速 (国内)
+    if [[ "$REGION" == "china" ]]; then
+        sudo mkdir -p /etc/docker
+        sudo tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+    "registry-mirrors": [
+        "https://docker.1ms.run",
+        "https://docker.xuanyuan.me"
+    ]
+}
+EOF
+        print_info "已配置 Docker 镜像加速"
+    fi
+
+    # 启动 Docker
+    sudo systemctl enable --now docker
+
+    # 添加当前用户到 docker 组
+    sudo usermod -aG docker $USER
+
+    # 验证安装
+    docker --version
+    docker compose version
+
+    print_success "Docker 安装完成"
+    print_warning "请重新登录以使 docker 组权限生效"
+}
+
+#===============================================================================
+# 安装 Miniconda
+#===============================================================================
+install_miniconda() {
+    print_header "安装 Miniconda"
+
+    cd /tmp
+
+    if [[ "$REGION" == "china" ]]; then
+        # 使用清华镜像
+        wget https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    else
+        wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    fi
+
+    bash miniconda.sh -b -p $HOME/miniconda
+
+    # 添加到 PATH
+    echo 'export PATH="$HOME/miniconda/bin:$PATH"' >> ~/.bashrc
+    export PATH="$HOME/miniconda/bin:$PATH"
+
+    # 初始化 conda
+    $HOME/miniconda/bin/conda init bash
+
+    # 配置国内镜像 (如果是国内服务器)
+    if [[ "$REGION" == "china" ]]; then
+        $HOME/miniconda/bin/conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/
+        $HOME/miniconda/bin/conda config --add channels https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
+        $HOME/miniconda/bin/conda config --set show_channel_urls yes
+        print_info "已配置 Conda 清华镜像源"
+    fi
+
+    # 创建 Python 3.10 环境
+    $HOME/miniconda/bin/conda create -y -n py310 python=3.10
+
+    # 清理安装文件
+    rm -f /tmp/miniconda.sh
+
+    print_success "Miniconda 安装完成"
+    print_info "已创建 py310 环境，使用 'conda activate py310' 激活"
+}
+
+#===============================================================================
+# 配置 Nginx
+#===============================================================================
+configure_nginx() {
+    print_header "配置 Nginx"
+
+    # 确保 nginx 已安装并运行
+    sudo systemctl enable --now nginx
+
+    # 开放防火墙
+    sudo ufw allow 'Nginx Full' 2>/dev/null || true
+
+    # 创建网站目录
+    sudo mkdir -p /var/www/${DOMAIN_NAME}/html
+    sudo mkdir -p /var/www/api.${DOMAIN_NAME}/html
+
+    # 创建主域名静态页面
+    sudo tee /var/www/${DOMAIN_NAME}/html/index.html > /dev/null <<EOF
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${DOMAIN_NAME}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            text-align: center;
+            color: white;
+            padding: 2rem;
+        }
+        h1 { font-size: 3rem; margin-bottom: 1rem; }
+        p { font-size: 1.2rem; opacity: 0.9; }
+        .status {
+            margin-top: 2rem;
+            padding: 1rem 2rem;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            display: inline-block;
+        }
+        .status::before {
+            content: '';
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>${DOMAIN_NAME}</h1>
+        <p>Welcome to our website</p>
+        <div class="status">Server Running</div>
+    </div>
+</body>
+</html>
+EOF
+
+    # 创建 API 子域名静态页面
+    sudo tee /var/www/api.${DOMAIN_NAME}/html/index.html > /dev/null <<EOF
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API - ${DOMAIN_NAME}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Monaco', 'Menlo', monospace;
+            background: #1a1a2e;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #eee;
+        }
+        .container {
+            background: #16213e;
+            padding: 2rem 3rem;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            max-width: 500px;
+        }
+        h1 {
+            color: #e94560;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .endpoint {
+            background: #0f3460;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+        .method {
+            color: #4ade80;
+            font-weight: bold;
+        }
+        .path { color: #60a5fa; }
+        .json {
+            background: #1a1a2e;
+            padding: 1rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            white-space: pre;
+        }
+        .key { color: #e94560; }
+        .value { color: #4ade80; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API.${DOMAIN_NAME}</h1>
+        <div class="endpoint">
+            <span class="method">GET</span>
+            <span class="path">/api/status</span>
+        </div>
+        <div class="json">{
+  <span class="key">"status"</span>: <span class="value">"online"</span>,
+  <span class="key">"version"</span>: <span class="value">"1.0.0"</span>,
+  <span class="key">"timestamp"</span>: <span class="value">"$(date -Iseconds)"</span>
+}</div>
+    </div>
+</body>
+</html>
+EOF
+
+    # 备份默认配置
+    if [[ -f /etc/nginx/sites-enabled/default ]]; then
+        sudo mv /etc/nginx/sites-enabled/default /etc/nginx/sites-enabled/default.bak
+    fi
+
+    # 创建 Nginx 配置
+    sudo tee /etc/nginx/sites-available/${DOMAIN_NAME} > /dev/null <<EOF
+# ${DOMAIN_NAME}: HTTP to HTTPS Redirect
+server {
+    listen 80;
+    server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+
+    # 如果没有 SSL 证书，先使用 HTTP
+    root /var/www/${DOMAIN_NAME}/html;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # 如果有 SSL 证书，取消下面的注释并注释上面的 location
+    # return 301 https://\$host\$request_uri;
+}
+
+# ${DOMAIN_NAME}: HTTPS (取消注释以启用)
+# server {
+#     listen 443 ssl http2;
+#     server_name ${DOMAIN_NAME} www.${DOMAIN_NAME};
+#
+#     ssl_certificate     /etc/ssl/certs/${DOMAIN_NAME}/fullchain.crt;
+#     ssl_certificate_key /etc/ssl/certs/${DOMAIN_NAME}/${DOMAIN_NAME}.key;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#
+#     root /var/www/${DOMAIN_NAME}/html;
+#     index index.html;
+#
+#     client_max_body_size 10240m;
+#
+#     proxy_set_header Host              \$host;
+#     proxy_set_header X-Real-IP         \$remote_addr;
+#     proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+#
+#     location / {
+#         try_files \$uri \$uri/ =404;
+#         # 如需反向代理到后端服务，使用:
+#         # proxy_pass http://localhost:9000/;
+#     }
+# }
+
+# api.${DOMAIN_NAME}: HTTP
+server {
+    listen 80;
+    server_name api.${DOMAIN_NAME};
+
+    root /var/www/api.${DOMAIN_NAME}/html;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+
+    # 如果有 SSL 证书，取消下面的注释并注释上面的 location
+    # return 301 https://\$host\$request_uri;
+}
+
+# api.${DOMAIN_NAME}: HTTPS (取消注释以启用)
+# server {
+#     listen 443 ssl http2;
+#     server_name api.${DOMAIN_NAME};
+#
+#     ssl_certificate     /etc/ssl/certs/${DOMAIN_NAME}/fullchain.crt;
+#     ssl_certificate_key /etc/ssl/certs/${DOMAIN_NAME}/${DOMAIN_NAME}.key;
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#
+#     client_max_body_size 16M;
+#
+#     proxy_connect_timeout 60s;
+#     proxy_send_timeout    60s;
+#     proxy_read_timeout    60s;
+#
+#     proxy_set_header Host              \$host;
+#     proxy_set_header X-Real-IP         \$remote_addr;
+#     proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+#
+#     location / {
+#         try_files \$uri \$uri/ =404;
+#         # 如需反向代理到 API 后端服务，使用:
+#         # proxy_pass http://localhost:9001/;
+#     }
+# }
+EOF
+
+    # 创建符号链接
+    sudo ln -sf /etc/nginx/sites-available/${DOMAIN_NAME} /etc/nginx/sites-enabled/${DOMAIN_NAME}
+
+    # 检查配置并重载
+    sudo nginx -t
+    sudo systemctl reload nginx
+
+    print_success "Nginx 配置完成"
+    print_info "主站点: http://${DOMAIN_NAME}"
+    print_info "API站点: http://api.${DOMAIN_NAME}"
+    print_warning "SSL 配置已注释，请上传证书后手动启用 HTTPS"
+}
+
+#===============================================================================
+# 配置中文支持
+#===============================================================================
+configure_chinese() {
+    print_header "配置中文支持"
+
+    sudo apt update
+    sudo apt install -y \
+        language-pack-zh-hans \
+        fonts-noto-cjk \
+        fonts-wqy-zenhei \
+        fonts-wqy-microhei
+
+    # 生成 locale
+    sudo locale-gen zh_CN.UTF-8
+    sudo update-locale LANG=zh_CN.UTF-8 LANGUAGE=zh_CN:zh
+
+    print_success "中文支持配置完成"
+    print_warning "需要重新登录或重启以使语言设置生效"
+}
+
+#===============================================================================
+# 显示安装摘要
+#===============================================================================
+show_summary() {
+    print_header "安装完成"
+
+    echo -e "${GREEN}已完成以下安装:${NC}"
+    echo ""
+
+    [[ "$INSTALL_BASIC" == true ]] && echo "  [OK] 基础软件 (git, curl, wget, htop, net-tools, tmux, vim, nginx)"
+    [[ "$INSTALL_DOCKER" == true ]] && echo "  [OK] Docker & Docker Compose"
+    [[ "$INSTALL_MINICONDA" == true ]] && echo "  [OK] Miniconda (py310 环境)"
+    [[ "$INSTALL_NGINX_CONFIG" == true ]] && echo "  [OK] Nginx 站点配置 (${DOMAIN_NAME})"
+    [[ "$INSTALL_CHINESE" == true ]] && echo "  [OK] 中文语言支持"
+
+    echo ""
+    echo -e "${YELLOW}后续操作提示:${NC}"
+    echo ""
+
+    if [[ "$INSTALL_DOCKER" == true ]]; then
+        echo "  - 重新登录以使 docker 用户组生效"
+    fi
+
+    if [[ "$INSTALL_MINICONDA" == true ]]; then
+        echo "  - 运行 'source ~/.bashrc' 或重新登录以激活 conda"
+        echo "  - 使用 'conda activate py310' 激活 Python 3.10 环境"
+    fi
+
+    if [[ "$INSTALL_NGINX_CONFIG" == true ]]; then
+        echo "  - 配置 DNS 解析: ${DOMAIN_NAME} 和 api.${DOMAIN_NAME}"
+        echo "  - 上传 SSL 证书后编辑 /etc/nginx/sites-available/${DOMAIN_NAME} 启用 HTTPS"
+    fi
+
+    if [[ "$INSTALL_CHINESE" == true ]]; then
+        echo "  - 重新登录或重启以使中文设置生效"
+    fi
+
+    echo ""
+    print_success "服务器初始化完成!"
+}
+
+#===============================================================================
+# 主函数
+#===============================================================================
+main() {
+    check_sudo
+    show_menu
+
+    # 执行安装
+    [[ "$REGION" == "china" ]] && setup_china_mirrors
+
+    # 更新系统
+    print_header "更新系统"
+    sudo apt update && sudo apt upgrade -y
+
+    [[ "$INSTALL_BASIC" == true ]] && install_basic_software
+    [[ "$INSTALL_DOCKER" == true ]] && install_docker
+    [[ "$INSTALL_MINICONDA" == true ]] && install_miniconda
+    [[ "$INSTALL_NGINX_CONFIG" == true ]] && configure_nginx
+    [[ "$INSTALL_CHINESE" == true ]] && configure_chinese
+
+    show_summary
+}
+
+# 运行主函数
+main "$@"
